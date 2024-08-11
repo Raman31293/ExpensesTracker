@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const userRouter = require("./routes/userRouter");
 const errorHandler = require("./middlewares/errorHandlerMiddleware");
 const categoryRouter = require("./routes/categoryRouter");
+const transactionRouter = require("./routes/transactionRouter ");
 const app = express();
 
 // connect to mongodb
@@ -21,6 +22,8 @@ app.use(express.json()); // Pass incoming json data as we have to pass only json
 // Routes
 app.use("/", userRouter);
 app.use("/", categoryRouter);
+app.use("/", transactionRouter);
+
 // use error middleware below all routes
 app.use(errorHandler);
 

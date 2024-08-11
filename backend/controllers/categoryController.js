@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Category = require("../model/Category");
+const Transaction = require("../model/Transaction");
 
 const categoryController = {
   // add
@@ -44,9 +45,50 @@ const categoryController = {
     res.status(200).json(categories);
   }),
   //   Updatae
-  update: asyncHandler(async (req, res) => {}),
+  update: asyncHandler(async (req, res) => {
+    const categoryId = req.params.id;
+    const { type, name } = req.body;
+    const normalizeName = name.toLowerCase();
+    const category = await Category.findById(categoryId);
+    if (!category && category.user.toString() !== req.user.toString()) {
+      throw new Error("category not found or user not authorize");
+    }
+    const oldName = category.name;
+    // update properties
+    category.name = name;
+    category.type = type;
+    const updatedCategory = await category.save();
+    // update affected transaction
+    if (oldName !== updatedCategory.name) {
+      await Transaction.updateMany(
+        {
+          user: req.user,
+          category: oldName,
+        },
+        {
+          $set: { category: updatedCategory.name },
+        }
+      );
+      res.json(updatedCategory);
+    }
+  }),
   // delete
-  delete: asyncHandler(async (req, res) => {}),
+  delete: asyncHandler(async (req, res) => {
+    const category = await Category.findById(req.params.id);
+    if (category && category.user.toString() === req.user.toString()) {
+      // whenever user going to delete category it will set category to bydefault uncategorized
+      const defaultCategory = "Uncategorized";
+      await Transaction.updateMany(
+        { user: req.user, category: category.name },
+        { $set: { category: defaultCategory } }
+      );
+      // remove category
+      await Category.findByIdAndDelete(req.params.id);
+      res.json({ message: "Category removed and transactions update " });
+    } else {
+      res.json({ message: "Category not found or user not authorized" });
+    }
+  }),
 };
 
 module.exports = categoryController;
